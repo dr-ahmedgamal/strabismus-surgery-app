@@ -22,37 +22,40 @@ filtered_df = df[
 # Display results
 st.subheader("Recommended Surgical Plan:")
 
+def display_surgery(row):
+    parts = []
+    if row['Recession_mm'] > 0:
+        parts.append(f"{row['Recession_mm']} mm Recession")
+    if row['Resection_mm'] > 0:
+        parts.append(f"{row['Resection_mm']} mm Resection")
+    action = " | ".join(parts)
+    return f"- Muscle: `{row['Muscle']}`\n  - Surgery Type: `{row['Surgery_Type']}`\n  - {action}" if action else None
+
 if filtered_df.empty:
     st.warning("No surgical recommendation found for the selected values.")
 else:
     if approach == "Unilateral":
         for idx, row in filtered_df.iterrows():
-            st.markdown(f"""
-            - **Affected Eye**
-              - Muscle: `{row['Muscle']}`
-              - Surgery Type: `{row['Surgery_Type']}`
-              - Amount: `{row['Recession_mm']} mm` Recession | `{row['Resection_mm']} mm` Resection
-            """)
-    else:  # Bilateral
+            surgery_plan = display_surgery(row)
+            if surgery_plan:
+                st.markdown("**Affected Eye**")
+                st.markdown(surgery_plan)
+    else:
         half = len(filtered_df) // 2
         right_eye = filtered_df.iloc[:half]
         left_eye = filtered_df.iloc[half:]
 
         st.markdown("### Right Eye")
         for idx, row in right_eye.iterrows():
-            st.markdown(f"""
-            - Muscle: `{row['Muscle']}`
-            - Surgery Type: `{row['Surgery_Type']}`
-            - Amount: `{row['Recession_mm']} mm` Recession | `{row['Resection_mm']} mm` Resection
-            """)
+            surgery_plan = display_surgery(row)
+            if surgery_plan:
+                st.markdown(surgery_plan)
 
         st.markdown("### Left Eye")
         for idx, row in left_eye.iterrows():
-            st.markdown(f"""
-            - Muscle: `{row['Muscle']}`
-            - Surgery Type: `{row['Surgery_Type']}`
-            - Amount: `{row['Recession_mm']} mm` Recession | `{row['Resection_mm']} mm` Resection
-            """)
+            surgery_plan = display_surgery(row)
+            if surgery_plan:
+                st.markdown(surgery_plan)
 
 st.markdown("---")
 st.caption("Built for ophthalmologists to assist in strabismus surgical planning.")
