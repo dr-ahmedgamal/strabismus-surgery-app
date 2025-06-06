@@ -5,7 +5,7 @@ from logic import get_recommendation  # assuming your logic.py has this function
 # Load CSV nomogram
 df = pd.read_csv("strabismus_nomogram.csv")
 
-st.title("Strabismus Surgery Planning App")
+st.title("Strabismus Surgery Planner")
 
 # Sidebar info
 st.sidebar.header("Input Parameters")
