@@ -1,45 +1,31 @@
 import streamlit as st
 import pandas as pd
-from logic import get_recommendation  # assuming your logic.py has this function
+from logic import get_recommendation
 
-# Load CSV nomogram
-df = pd.read_csv("strabismus_nomogram.csv")
+# Load the nomogram data
+nomogram_file = "strabismus_nomogram.csv"
+df = pd.read_csv(nomogram_file)
 
 st.title("Strabismus Surgery Planner")
+st.markdown("### Select Deviation Type and Amount")
 
-# Sidebar info
-st.sidebar.header("Input Parameters")
+# Strabismus type dropdown
+strabismus_type = st.selectbox("Deviation Type", sorted(df["Strabismus_Type"].unique()))
 
-# Strabismus Type selection
-strabismus_type = st.sidebar.selectbox("Strabismus Type", df["Strabismus_Type"].unique())
+# Deviation values dropdown based on type
+available_deviations = sorted(df[df["Strabismus_Type"] == strabismus_type]["Deviation_PD"].unique())
+deviation = st.selectbox("Deviation (Prism Diopters)", available_deviations)
 
-# Deviation selection - dropdown with steps of 5 from 15 to 90 (prism diopters)
-deviation_range = list(range(15, 95, 5))
-deviation = st.sidebar.selectbox("Deviation (prism diopters)", deviation_range)
+# Approach dropdown
+approach = st.selectbox("Surgical Approach", ["Unilateral", "Bilateral"])
 
-# Approach selection
-approach = st.sidebar.radio("Approach", ["Unilateral", "Bilateral"])
+# Submit button
+if st.button("Show Recommendation"):
+    recommendations = get_recommendation(strabismus_type, deviation, approach)
 
-# Button to show recommendation
-if st.sidebar.button("Show Recommendation"):
-    result = get_recommendation(strabismus_type, deviation, approach, df)
-
-    st.subheader("Surgical Recommendation")
-
-    if not result:
-        st.write("No valid recommendation found for the given inputs.")
+    st.markdown("## 🏥 Surgical Recommendation:")
+    if recommendations:
+        for line in recommendations:
+            st.markdown(f"<div style='font-size:18px; padding:4px;'>🔹 {line}</div>", unsafe_allow_html=True)
     else:
-        for eye, corrections in result.items():
-            st.markdown(f"**{eye} eye corrections:**")
-            for muscle, measures in corrections.items():
-                lines = []
-                if measures.get("Recession_mm", 0) > 0:
-                    lines.append(f"Recession: {measures['Recession_mm']} mm")
-                if measures.get("Resection_mm", 0) > 0:
-                    lines.append(f"Resection: {measures['Resection_mm']} mm")
-                if lines:
-                    st.markdown(f"- {muscle}: " + ", ".join(lines))
-
-    # Remove the footer lines as requested
-    # st.write("Fill the form and click Show Recommendation to display results.")
-    # st.write("Created to support precise ophthalmic strabismus surgical planning.")
+        st.warning("No recommendation found for the selected parameters.")
