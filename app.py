@@ -1,28 +1,23 @@
 
 import streamlit as st
 import pandas as pd
+from logic import get_surgical_plan, load_nomogram
 
-# Load the CSV file
-df = pd.read_csv("strabismus_nomogram.csv")
+st.set_page_config(page_title="Strabismus Surgical Planner", layout="centered")
 
-st.set_page_config(page_title="Strabismus Surgery Nomogram", layout="centered")
+# Load nomogram CSV
+df = load_nomogram("strabismus_nomogram.csv")
 
-st.title("👁️ Strabismus Surgery Nomogram Helper")
+st.title("👁️ Strabismus Surgical Planner")
+st.markdown("Use this app to plan muscle surgeries based on deviation and type of strabismus.")
 
-# User inputs
-strabismus_type = st.selectbox("Select Strabismus Type", df["Strabismus_Type"].unique())
-deviation = st.selectbox("Enter Deviation (in Prism Diopters)", sorted(df["Deviation_PD"].unique()))
-approach = st.selectbox("Select Approach", df["Approach"].unique())
+# User selections
+strabismus_type = st.selectbox("Select Strabismus Type", sorted(df["Strabismus_Type"].unique()))
+deviation_pd = st.selectbox("Select Deviation (Prism Diopters)", sorted(df["Deviation_PD"].unique()))
+approach = st.radio("Select Surgical Approach", sorted(df["Approach"].unique()))
 
-# Filter based on input
-filtered = df[
-    (df["Strabismus_Type"] == strabismus_type) &
-    (df["Deviation_PD"] == deviation) &
-    (df["Approach"] == approach)
-]
-
-st.subheader("Recommended Muscle Surgeries")
-st.dataframe(filtered.reset_index(drop=True))
-
-st.markdown("---")
-st.caption("This tool is based on customizable surgical nomograms. Always confirm with clinical judgment.")
+# Predict and show plan
+if st.button("Get Surgical Plan"):
+    result = get_surgical_plan(strabismus_type, deviation_pd, approach, df)
+    st.subheader("Recommended Surgical Plan")
+    st.code(result, language="markdown")

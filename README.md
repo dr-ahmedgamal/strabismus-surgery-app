@@ -1,27 +1,31 @@
+# Strabismus Surgical Planner App
 
-# Strabismus Surgical Planner
-
-This app helps ophthalmologists determine surgical plans for strabismus cases based on established surgical nomograms.
+This Streamlit app helps ophthalmologists plan surgical correction for various types of strabismus.
 
 ## Features
-- Covers Esotropia, Exotropia, Hypertropia, Hypotropia, and more
-- Handles deviation angles from 15–90 prism diopters in 5 PD steps
-- Recommends precise recession/resection procedures based on laterality
-- Supports unilateral and bilateral surgical plans
 
-## Usage
-To run locally:
+- Supports Esotropia, Exotropia, Hypertropia, and Hypotropia.
+- Suggests appropriate muscles to operate based on type, deviation, and approach.
+- Uses nomograms with precision (0.5 mm steps) up to maximum safe values.
+- Provides both unilateral and bilateral surgical plans.
 
-1. Install requirements:
-    pip install -r requirements.txt
+## How to Use
 
-2. Launch the app:
-    streamlit run app.py
+1. Upload the `strabismus_nomogram.csv` file.
+2. Choose the type of strabismus, deviation amount, and surgical approach.
+3. View surgical recommendations with appropriate muscle actions and measurements.
 
-## Files
-- `app.py`: Streamlit app
-- `requirements.txt`: Python dependencies
-- `strabismus_nomogram_full.csv`: Full surgical reference dataset
+## Installation
 
-## Credits
-Developed with ophthalmic surgical principles and literature-based nomograms.
+```bash
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+## File Descriptions
+
+- `strabismus_nomogram.csv`: Main data file with surgical nomograms.
+- `logic.py`: Contains core surgical decision-making logic.
+- `app.py`: Main Streamlit app interface.
+- `requirements.txt`: Python dependencies.
+- `README.md`: App documentation.
