@@ -4,7 +4,7 @@ import pandas as pd
 # Load the updated CSV file
 df = pd.read_csv("strabismus_nomogram.csv")
 
-st.title("Strabismus Surgery Nomogram App")
+st.title("👀 Strabismus Surgery Planner")
 st.markdown("Enter the details below to get the recommended surgical plan:")
 
 # User input
