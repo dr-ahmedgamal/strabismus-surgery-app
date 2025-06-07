@@ -1,148 +1,114 @@
-def calculate_correction_amounts(deviation_type, deviation_pd, approach):
-    """
-    Calculate muscle corrections based on deviation type, amount, and surgical approach.
-    Formulas:
+def calculate_surgery(deviation_type, deviation_value, approach):
+    plan = []
 
-    Esotropia:
-      - Medial rectus recession = 3 mm baseline + 1 mm per 5 PD step above 15 PD
-      - Lateral rectus resection = 3 mm baseline + 1 mm per 5 PD step above 15 PD
+    def add_procedure(eye, muscle, action, amount):
+        if amount > 0:
+            plan.append((eye, f"{muscle} {action} of {amount:.1f} mm"))
 
-    Exotropia:
-      - Lateral rectus recession = 4 mm baseline + 1 mm per 5 PD step above 15 PD
-      - Medial rectus resection = 3 mm baseline + 0.5 mm per 5 PD step above 15 PD
+    def split_bilateral(amount):
+        half = round(amount / 2, 1)
+        return half, half
 
-    Vertical deviations (Hypertropia/Hypotropia):
-      - Use medial rectus nomogram (same as esotropia medial rectus)
-    
-    If total correction on any muscle > 12 mm, split equally bilaterally.
-
-    Returns:
-      dict with keys:
-        'affected_eye': list of tuples (muscle, amount)
-        'other_eye': list of tuples (muscle, amount)
-    """
-    # Helper function to calculate correction amount based on steps above 15 PD
-    def steps_above_15(pd):
-        if pd <= 15:
-            return 0
-        return (pd - 15) / 5  # steps in units of 5 PD
-
-    steps = steps_above_15(deviation_pd)
-    
-    # Initialize muscle amounts
-    affected = []
-    other = []
-
-    # Define baseline and increments for each muscle depending on deviation type
-    if deviation_type.lower() == "esotropia":
-        # Medial rectus recession (affected eye)
-        mr_base = 3
-        mr_inc = 1
-        # Lateral rectus resection (affected eye)
-        lr_base = 3
-        lr_inc = 1
-
-        mr_amount = mr_base + mr_inc * steps
-        lr_amount = lr_base + lr_inc * steps
-
-        # Check for max 12 mm limit and split if exceeded
-        # Medial rectus recession
-        if mr_amount > 12:
-            mr_affected = 12
-            mr_other = mr_amount - 12
-            mr_affected, mr_other = mr_amount / 2, mr_amount / 2  # equal split
+    def handle_large_correction(amount, baseline, step_mm, muscle, action, opposite_muscle=None):
+        # amount is the total mm calculated including baseline
+        if amount <= 12:
+            return [(muscle, action, amount)]
         else:
-            mr_affected = mr_amount
-            mr_other = 0
+            # split equally but max 12 per eye (or muscle)
+            half = amount / 2
+            half = min(12, round(half, 1))
+            remainder = round(amount - half, 1)
+            corrections = [(muscle, action, half)]
+            if opposite_muscle:
+                corrections.append((opposite_muscle, action, half))
+            else:
+                corrections.append((muscle, action, remainder))
+            return corrections
 
-        # Lateral rectus resection
-        if lr_amount > 12:
-            lr_affected = 12
-            lr_other = lr_amount - 12
-            lr_affected, lr_other = lr_amount / 2, lr_amount / 2  # equal split
+    # Helper to calculate steps over baseline of 15 PD
+    def steps_over_15(pd):
+        return max(0, (pd - 15) // 5)
+
+    if deviation_type == "Esotropia":
+        # Baseline 3 mm for MR recession and LR resection
+        steps = steps_over_15(deviation_value)
+        mr_recession = 3 + steps * 1.0
+        lr_resection = 3 + steps * 1.0
+
+        if approach == "Unilateral":
+            # Handle large corrections by splitting if > 12
+            mr_corr = handle_large_correction(mr_recession, 3, 1, "Medial Rectus", "recession")
+            for muscle, action, amt in mr_corr:
+                add_procedure("Affected Eye", muscle, action, amt)
+            lr_corr = handle_large_correction(lr_resection, 3, 1, "Lateral Rectus", "resection")
+            for muscle, action, amt in lr_corr:
+                add_procedure("Affected Eye", muscle, action, amt)
+
+        else:  # Bilateral MR recessions
+            mr_corr = handle_large_correction(mr_recession, 3, 1, "Medial Rectus", "recession", opposite_muscle="Medial Rectus")
+            # Split equally across eyes
+            if len(mr_corr) == 1:
+                # amount <= 12, split evenly
+                half1, half2 = split_bilateral(mr_corr[0][2])
+                add_procedure("Affected Eye", mr_corr[0][0], mr_corr[0][1], half1)
+                add_procedure("Contralateral Eye", mr_corr[0][0], mr_corr[0][1], half2)
+            else:
+                # large correction split on two muscles (same muscle different eyes)
+                for i, (muscle, action, amt) in enumerate(mr_corr):
+                    eye = "Affected Eye" if i == 0 else "Contralateral Eye"
+                    add_procedure(eye, muscle, action, amt)
+
+    elif deviation_type == "Exotropia":
+        steps = steps_over_15(deviation_value)
+        lr_recession = 4 + steps * 1.0
+        mr_resection = 3 + steps * 0.5
+
+        if approach == "Unilateral":
+            lr_corr = handle_large_correction(lr_recession, 4, 1, "Lateral Rectus", "recession")
+            for muscle, action, amt in lr_corr:
+                add_procedure("Affected Eye", muscle, action, amt)
+            mr_corr = handle_large_correction(mr_resection, 3, 0.5, "Medial Rectus", "resection")
+            for muscle, action, amt in mr_corr:
+                add_procedure("Affected Eye", muscle, action, amt)
+
+        else:  # Bilateral LR recessions
+            lr_corr = handle_large_correction(lr_recession, 4, 1, "Lateral Rectus", "recession", opposite_muscle="Lateral Rectus")
+            if len(lr_corr) == 1:
+                half1, half2 = split_bilateral(lr_corr[0][2])
+                add_procedure("Affected Eye", lr_corr[0][0], lr_corr[0][1], half1)
+                add_procedure("Contralateral Eye", lr_corr[0][0], lr_corr[0][1], half2)
+            else:
+                for i, (muscle, action, amt) in enumerate(lr_corr):
+                    eye = "Affected Eye" if i == 0 else "Contralateral Eye"
+                    add_procedure(eye, muscle, action, amt)
+
+    elif deviation_type == "Hypertropia":
+        steps = steps_over_15(deviation_value)
+        # Recession - baseline 3 + 1 mm per 5 PD step
+        recession_amount = 3 + steps * 1.0
+        # Resection - baseline 3 + 0.5 mm per 5 PD step
+        resection_amount = 3 + steps * 0.5
+
+        if approach == "Unilateral":
+            # Affected Eye Superior Rectus recession
+            add_procedure("Affected Eye", "Superior Rectus", "recession", recession_amount)
+            # Affected Eye Inferior Rectus resection
+            add_procedure("Affected Eye", "Inferior Rectus", "resection", resection_amount)
         else:
-            lr_affected = lr_amount
-            lr_other = 0
+            # Bilateral recession of Superior Rectus and Inferior Rectus on contralateral
+            add_procedure("Affected Eye", "Superior Rectus", "recession", recession_amount)
+            add_procedure("Contralateral Eye", "Inferior Rectus", "recession", recession_amount)
 
-        if approach.lower() == "unilateral":
-            affected = [("Medial Rectus recession", round(mr_affected, 1)),
-                        ("Lateral Rectus resection", round(lr_affected, 1))]
-            other = []
-            if mr_other > 0 or lr_other > 0:
-                # Add other eye corrections if split
-                if mr_other > 0:
-                    other.append(("Medial Rectus recession", round(mr_other,1)))
-                if lr_other > 0:
-                    other.append(("Lateral Rectus resection", round(lr_other,1)))
-        else:  # bilateral approach
-            # Bilateral medial rectus recessions split equally
-            mr_total = mr_amount
-            mr_each = round(mr_total / 2, 1)
-            affected = [("Medial Rectus recession", mr_each)]
-            other = [("Medial Rectus recession", mr_each)]
+    elif deviation_type == "Hypotropia":
+        steps = steps_over_15(deviation_value)
+        recession_amount = 3 + steps * 1.0
+        resection_amount = 3 + steps * 0.5
 
-    elif deviation_type.lower() == "exotropia":
-        # Lateral rectus recession (affected eye)
-        lr_base = 4
-        lr_inc = 1
-        # Medial rectus resection (affected eye)
-        mr_base = 3
-        mr_inc = 0.5
-
-        lr_amount = lr_base + lr_inc * steps
-        mr_amount = mr_base + mr_inc * steps
-
-        # Check max 12 mm limits and split if exceeded
-        if lr_amount > 12:
-            lr_affected, lr_other = lr_amount / 2, lr_amount / 2
+        if approach == "Unilateral":
+            add_procedure("Affected Eye", "Inferior Rectus", "recession", recession_amount)
+            add_procedure("Affected Eye", "Superior Rectus", "resection", resection_amount)
         else:
-            lr_affected, lr_other = lr_amount, 0
+            add_procedure("Affected Eye", "Inferior Rectus", "recession", recession_amount)
+            add_procedure("Contralateral Eye", "Superior Rectus", "recession", recession_amount)
 
-        if mr_amount > 12:
-            mr_affected, mr_other = mr_amount / 2, mr_amount / 2
-        else:
-            mr_affected, mr_other = mr_amount, 0
-
-        if approach.lower() == "unilateral":
-            affected = [("Lateral Rectus recession", round(lr_affected,1)),
-                        ("Medial Rectus resection", round(mr_affected,1))]
-            other = []
-            if lr_other > 0:
-                other.append(("Lateral Rectus recession", round(lr_other,1)))
-            if mr_other > 0:
-                other.append(("Medial Rectus resection", round(mr_other,1)))
-        else:  # bilateral approach
-            # Bilateral lateral rectus recessions split equally
-            lr_total = lr_amount
-            lr_each = round(lr_total / 2, 1)
-            affected = [("Lateral Rectus recession", lr_each)]
-            other = [("Lateral Rectus recession", lr_each)]
-
-    elif deviation_type.lower() in ["hypertropia", "hypotropia"]:
-        # Use same nomogram as medial rectus for vertical deviations
-        mr_base = 3
-        mr_inc = 1
-        mr_amount = mr_base + mr_inc * steps
-
-        if mr_amount > 12:
-            mr_affected, mr_other = mr_amount / 2, mr_amount / 2
-        else:
-            mr_affected, mr_other = mr_amount, 0
-
-        if approach.lower() == "unilateral":
-            affected = [("Medial Rectus recession", round(mr_affected,1))]
-            other = []
-            if mr_other > 0:
-                other = [("Medial Rectus recession", round(mr_other,1))]
-        else:  # bilateral approach
-            mr_each = round(mr_amount / 2, 1)
-            affected = [("Medial Rectus recession", mr_each)]
-            other = [("Medial Rectus recession", mr_each)]
-
-    else:
-        raise ValueError("Unknown deviation type. Allowed: Esotropia, Exotropia, Hypertropia, Hypotropia.")
-
-    return {
-        "affected_eye": affected,
-        "other_eye": other
-    }
+    return plan
