@@ -1,31 +1,66 @@
+def calculate_surgery(deviation_type, deviation_value, approach):
+    plan = []
 
-import pandas as pd
+    def add_procedure(eye, muscle, action, amount):
+        if amount > 0:
+            plan.append(f"{eye} {muscle} {action} of {amount:.1f} mm")
 
-def recommend_surgery(strabismus_type, deviation, approach, csv_file="strabismus_nomogram.csv"):
-    df = pd.read_csv(csv_file)
+    def split_bilateral(amount):
+        return round(amount / 2, 1), round(amount / 2, 1)
 
-    filtered = df[
-        (df["Strabismus_Type"] == strabismus_type) &
-        (df["Deviation_PD"] == deviation) &
-        (df["Approach"] == approach)
-    ]
+    def handle_large_correction(primary_amount, muscle, action, opposite_muscle):
+        if primary_amount <= 12:
+            return [(muscle, action, primary_amount)]
+        else:
+            return [
+                (muscle, action, 12),
+                (opposite_muscle, action, round(primary_amount - 12, 1))
+            ]
 
-    if filtered.empty:
-        return "No recommendation found for the selected parameters."
+    if deviation_type == "Esotropia":
+        mr_amount = round(deviation_value / 5.0, 1)
+        lr_amount = round(deviation_value / 10.0, 1)
+        
+        if approach == "Unilateral":
+            corrections = handle_large_correction(mr_amount, "Medial Rectus", "recession", "Medial Rectus (Left Eye)")
+            for muscle, action, amt in corrections:
+                add_procedure("Right Eye", muscle, action, amt)
+            add_procedure("Right Eye", "Lateral Rectus", "resection", lr_amount)
+        else:
+            r_amt, l_amt = split_bilateral(mr_amount)
+            add_procedure("Right Eye", "Medial Rectus", "recession", r_amt)
+            add_procedure("Left Eye", "Medial Rectus", "recession", l_amt)
 
-    recommendations = {}
-    for _, row in filtered.iterrows():
-        muscle = row["Muscle"]
-        surgery_type = row["Surgery_Type"]
-        recession = row["Recession_mm"]
-        resection = row["Resection_mm"]
+    elif deviation_type == "Exotropia":
+        lr_amount = round(deviation_value / 5.0, 1)
+        mr_amount = round(deviation_value / 10.0, 1)
 
-        if muscle not in recommendations:
-            recommendations[muscle] = {}
+        if approach == "Unilateral":
+            corrections = handle_large_correction(lr_amount, "Lateral Rectus", "recession", "Lateral Rectus (Left Eye)")
+            for muscle, action, amt in corrections:
+                add_procedure("Right Eye", muscle, action, amt)
+            add_procedure("Right Eye", "Medial Rectus", "resection", mr_amount)
+        else:
+            r_amt, l_amt = split_bilateral(lr_amount)
+            add_procedure("Right Eye", "Lateral Rectus", "recession", r_amt)
+            add_procedure("Left Eye", "Lateral Rectus", "recession", l_amt)
 
-        if recession > 0:
-            recommendations[muscle]["Recession"] = recession
-        if resection > 0:
-            recommendations[muscle]["Resection"] = resection
+    elif deviation_type == "Hypertropia":
+        amount = round(deviation_value / 5.0, 1)
+        if approach == "Unilateral":
+            add_procedure("Right Eye", "Superior Rectus", "recession", amount)
+            add_procedure("Right Eye", "Inferior Rectus", "resection", amount)
+        else:
+            add_procedure("Right Eye", "Superior Rectus", "recession", amount)
+            add_procedure("Left Eye", "Inferior Rectus", "recession", amount)
 
-    return recommendations
+    elif deviation_type == "Hypotropia":
+        amount = round(deviation_value / 5.0, 1)
+        if approach == "Unilateral":
+            add_procedure("Right Eye", "Inferior Rectus", "recession", amount)
+            add_procedure("Right Eye", "Superior Rectus", "resection", amount)
+        else:
+            add_procedure("Right Eye", "Inferior Rectus", "recession", amount)
+            add_procedure("Left Eye", "Superior Rectus", "recession", amount)
+
+    return plan
