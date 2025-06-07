@@ -1,31 +1,35 @@
+
 import streamlit as st
 import pandas as pd
-from logic import get_recommendation
+from logic import recommend_surgery
 
-# Load the nomogram data
-nomogram_file = "strabismus_nomogram.csv"
-df = pd.read_csv(nomogram_file)
+st.set_page_config(page_title="Strabismus Surgery Planner", layout="centered")
+st.title("Strabismus Surgical Planner")
 
-st.title("Strabismus Surgery Planner")
-st.markdown("### Select Deviation Type and Amount")
+df = pd.read_csv("strabismus_nomogram.csv")
 
-# Strabismus type dropdown
-strabismus_type = st.selectbox("Deviation Type", sorted(df["Strabismus_Type"].unique()))
+st.markdown("### Please fill the following details to get surgical recommendation")
 
-# Deviation values dropdown based on type
-available_deviations = sorted(df[df["Strabismus_Type"] == strabismus_type]["Deviation_PD"].unique())
-deviation = st.selectbox("Deviation (Prism Diopters)", available_deviations)
+strabismus_types = df["Strabismus_Type"].unique()
+selected_type = st.selectbox("Select Type of Strabismus", strabismus_types)
 
-# Approach dropdown
-approach = st.selectbox("Surgical Approach", ["Unilateral", "Bilateral"])
+deviation_values = sorted(df[df["Strabismus_Type"] == selected_type]["Deviation_PD"].unique())
+selected_deviation = st.selectbox("Select Deviation (Prism Diopters)", deviation_values)
 
-# Submit button
+approach = st.radio("Select Surgical Approach", options=["Unilateral", "Bilateral"])
+
 if st.button("Show Recommendation"):
-    recommendations = get_recommendation(strabismus_type, deviation, approach)
+    result = recommend_surgery(selected_type, selected_deviation, approach)
 
-    st.markdown("## 🏥 Surgical Recommendation:")
-    if recommendations:
-        for line in recommendations:
-            st.markdown(f"<div style='font-size:18px; padding:4px;'>🔹 {line}</div>", unsafe_allow_html=True)
+    if isinstance(result, dict):
+        st.subheader("Surgical Plan Recommendation:")
+        for muscle, actions in result.items():
+            parts = []
+            if "Recession" in actions:
+                parts.append(f"Recession: **{actions['Recession']} mm**")
+            if "Resection" in actions:
+                parts.append(f"Resection: **{actions['Resection']} mm**")
+            if parts:
+                st.markdown(f"- **{muscle}**: " + ", ".join(parts), unsafe_allow_html=True)
     else:
-        st.warning("No recommendation found for the selected parameters.")
+        st.warning(result)
