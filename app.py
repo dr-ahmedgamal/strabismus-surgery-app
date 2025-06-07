@@ -1,54 +1,31 @@
 import streamlit as st
-from logic import unilateral_approach, bilateral_approach
+from logic import plan_unilateral, plan_bilateral
 
-st.title("Strabismus Surgery Planning")
+st.set_page_config(page_title="Strabismus Surgery Planner", layout="centered")
 
-st.markdown(
-    """
-    This app calculates recommended recession and resection muscle lengths for strabismus correction.
-    Choose deviation type, approach, and enter deviation angle (in PD).
-    """
-)
+st.title("👁️‍🗨️ Strabismus Surgical Planning App")
+st.markdown("This tool suggests surgical plans based on type and amount of strabismus.")
 
-# Select deviation type
-deviation_type = st.selectbox(
-    "Select Deviation Type:",
-    options=["Esotropia", "Exotropia", "Hypertropia", "Hypotropia"]
-).lower()
+# User input
+deviation_type = st.selectbox("Select deviation type:", ["Exotropia", "Esotropia", "Hypertropia", "Hypotropia"])
+amount_pd = st.slider("Deviation amount (in prism diopters):", min_value=15, max_value=100, step=5)
+approach = st.radio("Preferred approach:", ["Unilateral", "Bilateral"])
 
-# Select surgical approach
-approach = st.selectbox(
-    "Select Surgical Approach:",
-    options=["Unilateral", "Bilateral"]
-).lower()
+# Generate and display plan
+st.subheader("📋 Recommended Surgical Plan:")
 
-# Deviation input with step 5
-pd_value = st.number_input(
-    "Enter Deviation Angle (PD):",
-    min_value=15,
-    max_value=100,
-    step=5,
-    value=30,
-    format="%d"
-)
+if approach == "Unilateral":
+    plan = plan_unilateral(deviation_type, amount_pd)
+    if "resection" not in " ".join(plan.keys()).lower():
+        st.markdown("➡️ *Unilateral approach selected and feasible.*")
+    else:
+        st.markdown("🔁 *Unilateral not feasible — showing Bilateral plan.*")
+else:
+    plan = plan_bilateral(deviation_type, amount_pd)
+    st.markdown("➡️ *Bilateral approach selected.*")
 
-# Button to calculate
-if st.button("Calculate Surgery Plan"):
-    try:
-        if approach == "unilateral":
-            result = unilateral_approach(deviation_type, pd_value)
-        else:
-            result = bilateral_approach(deviation_type, pd_value)
-
-        if "error" in result:
-            st.error(result["error"])
-        else:
-            st.success("Recommended Surgical Plan:")
-            for muscle_action, length in result.items():
-                if length == "Not needed":
-                    st.info(f"{muscle_action.replace('_', ' ').title()}: {length}")
-                else:
-                    st.write(f"**{muscle_action.replace('_', ' ').title()}**: {length} mm")
-
-    except Exception as e:
-        st.error(f"Error: {str(e)}")
+if plan:
+    for key, value in plan.items():
+        st.write(f"**{key}**: {value} mm")
+else:
+    st.warning("⚠️ No valid surgical plan found for the selected parameters.")
