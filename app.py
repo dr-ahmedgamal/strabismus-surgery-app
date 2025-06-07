@@ -3,27 +3,33 @@ from logic import calculate_surgery
 
 st.set_page_config(page_title="Strabismus Surgical Planner", layout="centered")
 
-st.title("Strabismus Surgical Planner")
+st.title("Strabismus Surgical Planning Tool")
 st.markdown("""
-Use the dropdown menus below to choose deviation type, deviation amount, and surgical approach.
-Click **Show Recommendation** to see a personalized surgical plan.
+#### Fill out the form below, then click **Show Recommendation** to generate a tailored surgical plan based on the type and magnitude of deviation.
 """)
 
-# User input controls
-deviation_type = st.selectbox("Select Deviation Type", ["Esotropia", "Exotropia", "Hypertropia", "Hypotropia"])
-deviation_value = st.selectbox("Select Deviation (in Prism Diopters)", list(range(15, 95, 5)))
-approach = st.selectbox("Surgical Approach", ["Unilateral", "Bilateral"])
+# Sidebar form with button to trigger processing
+with st.form(key="surgery_form"):
+    deviation_type = st.selectbox("Deviation Type", ["Esotropia", "Exotropia", "Hypertropia", "Hypotropia"])
 
-# Button to trigger recommendation
-if st.button("Show Recommendation"):
-    try:
-        recommendations = calculate_surgery(deviation_type, deviation_value, approach)
+    if deviation_type in ["Esotropia", "Exotropia"]:
+        deviation_range = list(range(15, 85, 5))
+    else:
+        deviation_range = list(range(5, 50, 5))
 
-        if recommendations:
-            st.markdown("### Recommended Surgical Plan:")
-            for rec in recommendations:
-                st.markdown(f"<div style='font-size:20px; padding:6px 0;'>{rec}</div>", unsafe_allow_html=True)
-        else:
-            st.warning("No recommendation found for selected options.")
-    except Exception as e:
-        st.error(f"An error occurred while calculating recommendation: {e}")
+    deviation_value = st.selectbox("Deviation in Prism Diopters", deviation_range)
+    approach = st.selectbox("Surgical Approach", ["Unilateral", "Bilateral"])
+
+    submitted = st.form_submit_button("Show Recommendation")
+
+if submitted:
+    results = calculate_surgery(deviation_type, deviation_value, approach)
+
+    st.markdown("---")
+    st.subheader("Recommended Surgical Plan")
+
+    if results:
+        for step in results:
+            st.markdown(f"<div style='font-size:18px; padding:6px;'>{step}</div>", unsafe_allow_html=True)
+    else:
+        st.markdown("<div style='font-size:18px; color:red;'>No surgical correction recommended.</div>", unsafe_allow_html=True)
