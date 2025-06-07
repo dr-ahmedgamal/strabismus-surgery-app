@@ -1,35 +1,29 @@
-
 import streamlit as st
-import pandas as pd
-from logic import recommend_surgery
+from logic import calculate_surgery
 
-st.set_page_config(page_title="Strabismus Surgery Planner", layout="centered")
+st.set_page_config(page_title="Strabismus Surgical Planner", layout="centered")
+
 st.title("Strabismus Surgical Planner")
+st.markdown("""
+Use the dropdown menus below to choose deviation type, deviation amount, and surgical approach.
+Click **Show Recommendation** to see a personalized surgical plan.
+""")
 
-df = pd.read_csv("strabismus_nomogram.csv")
+# User input controls
+deviation_type = st.selectbox("Select Deviation Type", ["Esotropia", "Exotropia", "Hypertropia", "Hypotropia"])
+deviation_value = st.selectbox("Select Deviation (in Prism Diopters)", list(range(15, 95, 5)))
+approach = st.selectbox("Surgical Approach", ["Unilateral", "Bilateral"])
 
-st.markdown("### Please fill the following details to get surgical recommendation")
-
-strabismus_types = df["Strabismus_Type"].unique()
-selected_type = st.selectbox("Select Type of Strabismus", strabismus_types)
-
-deviation_values = sorted(df[df["Strabismus_Type"] == selected_type]["Deviation_PD"].unique())
-selected_deviation = st.selectbox("Select Deviation (Prism Diopters)", deviation_values)
-
-approach = st.radio("Select Surgical Approach", options=["Unilateral", "Bilateral"])
-
+# Button to trigger recommendation
 if st.button("Show Recommendation"):
-    result = recommend_surgery(selected_type, selected_deviation, approach)
+    try:
+        recommendations = calculate_surgery(deviation_type, deviation_value, approach)
 
-    if isinstance(result, dict):
-        st.subheader("Surgical Plan Recommendation:")
-        for muscle, actions in result.items():
-            parts = []
-            if "Recession" in actions:
-                parts.append(f"Recession: **{actions['Recession']} mm**")
-            if "Resection" in actions:
-                parts.append(f"Resection: **{actions['Resection']} mm**")
-            if parts:
-                st.markdown(f"- **{muscle}**: " + ", ".join(parts), unsafe_allow_html=True)
-    else:
-        st.warning(result)
+        if recommendations:
+            st.markdown("### Recommended Surgical Plan:")
+            for rec in recommendations:
+                st.markdown(f"<div style='font-size:20px; padding:6px 0;'>{rec}</div>", unsafe_allow_html=True)
+        else:
+            st.warning("No recommendation found for selected options.")
+    except Exception as e:
+        st.error(f"An error occurred while calculating recommendation: {e}")
