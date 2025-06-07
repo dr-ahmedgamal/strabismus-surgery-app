@@ -1,40 +1,44 @@
 import streamlit as st
-import pandas as pd
-from logic import calculate_correction_amounts
+from logic import calculate_surgery
 
-st.title("Strabismus Surgical Nomogram Calculator")
+def main():
+    st.title("Strabismus Surgical Planner")
 
-# Load CSV file with cases if needed (optional)
-# data = pd.read_csv('strabismus_cases.csv')
+    # Dropdown for deviation type
+    deviation_type = st.selectbox(
+        "Select Deviation Type:",
+        ("Esotropia", "Exotropia", "Hypertropia", "Hypotropia")
+    )
 
-deviation_types = ["Esotropia", "Exotropia", "Hypertropia", "Hypotropia"]
-approaches = ["Unilateral", "Bilateral"]
+    # Dropdown for deviation amount starting at 15, step 5, max 80 or 100 as you want
+    deviation_values = list(range(15, 101, 5))
+    deviation_value = st.selectbox("Select Deviation (prism diopters):", deviation_values, index=0)
 
-# User input widgets
-deviation_type = st.selectbox("Select deviation type:", deviation_types)
-deviation_pd = st.slider("Enter deviation amount (Prism Diopters):", min_value=15, max_value=80, step=5)
-approach = st.selectbox("Select surgical approach:", approaches)
+    approach = st.radio("Choose Surgical Approach:", ("Unilateral", "Bilateral"))
 
-if st.button("Calculate Surgical Plan"):
-    try:
-        corrections = calculate_correction_amounts(deviation_type, deviation_pd, approach)
+    if st.button("Get Surgical Recommendation"):
+        plan = calculate_surgery(deviation_type, deviation_value, approach)
 
+        # Separate procedures by eye
+        affected_eye = []
+        contralateral_eye = []
+
+        for eye, procedure in plan:
+            if eye == "Affected Eye":
+                affected_eye.append(procedure)
+            else:
+                contralateral_eye.append(procedure)
+
+        # Format output
         st.subheader("Surgical Recommendation")
+        if affected_eye:
+            st.markdown("**Affected Eye Correction:**  ")
+            st.markdown(", ".join(affected_eye))
 
-        # Format affected eye corrections
-        affected_corrs = corrections.get("affected_eye", [])
-        affected_str = ", ".join([f"{muscle} of {amount} mm" for muscle, amount in affected_corrs])
-        if affected_str:
-            st.markdown(f"**Affected Eye Correction:** {affected_str}")
+        if contralateral_eye:
+            st.markdown("**Contralateral Eye Correction:**  ")
+            st.markdown(", ".join(contralateral_eye))
 
-        # Format other eye corrections
-        other_corrs = corrections.get("other_eye", [])
-        other_str = ", ".join([f"{muscle} of {amount} mm" for muscle, amount in other_corrs])
-        if other_str:
-            st.markdown(f"**Other Eye Correction:** {other_str}")
 
-        if not affected_str and not other_str:
-            st.write("No corrections required for the given input.")
-
-    except Exception as e:
-        st.error(f"Error: {e}")
+if __name__ == "__main__":
+    main()
