@@ -1,24 +1,34 @@
 # app.py
-import streamlit as st
-from logic import calculate_plan
 
+import streamlit as st
+from logic import unilateral_plan, bilateral_plan
+
+st.set_page_config(page_title="Strabismus Surgical Planner", layout="centered")
 st.title("Strabismus Surgical Planning App")
 
-deviation_type = st.selectbox(
-    "Select deviation type",
-    ['esotropia', 'exotropia', 'hypertropia', 'hypotropia']
-)
+st.sidebar.header("Input Parameters")
+deviation_type = st.sidebar.selectbox("Deviation Type", ["exotropia", "esotropia", "hypertropia", "hypotropia"])
+deviation_pd = st.sidebar.number_input("Deviation Amount (in PD)", min_value=1, max_value=100, value=40)
 
-deviation_pd = st.slider("Deviation amount (PD)", 15, 90, 30)
+st.sidebar.markdown("---")
+approach = st.sidebar.radio("Select Surgical Approach", ["Unilateral", "Bilateral"])
 
-approach = st.radio(
-    "Select surgical approach",
-    ['unilateral', 'bilateral']
-)
+st.markdown(f"### Surgical Plan for {deviation_pd} PD {deviation_type.title()}")
 
-if st.button("Calculate Plan"):
-    plan = calculate_plan(deviation_pd, deviation_type, approach)
-    
-    st.subheader("Surgical Plan")
-    for muscle, mm in plan.items():
-        st.write(f"{muscle}: {mm} mm")
+if approach == "Unilateral":
+    plan = unilateral_plan(deviation_type, deviation_pd)
+    if plan.get("status") == "Not allowed":
+        st.error("Unilateral approach not possible: " + plan["reason"])
+    else:
+        st.success("Unilateral approach allowed")
+        for key, value in plan.items():
+            if key != "status":
+                st.write(f"**{key}**: {value} mm")
+else:
+    plan = bilateral_plan(deviation_type, deviation_pd)
+    st.success("Bilateral approach plan:")
+    for key, value in plan.items():
+        st.write(f"**{key}**: {value} mm")
+
+st.markdown("---")
+st.caption("Created for clinical planning of horizontal and vertical strabismus corrections.")
