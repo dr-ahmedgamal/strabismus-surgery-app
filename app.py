@@ -1,33 +1,40 @@
 import streamlit as st
 import pandas as pd
-from logic import calculate_surgery
+from logic import calculate_correction_amounts
 
-st.set_page_config(page_title="Strabismus Surgical Planner", layout="centered")
-st.title("Strabismus Surgical Recommendation App")
+st.title("Strabismus Surgical Nomogram Calculator")
 
-st.markdown("Upload a CSV file or manually input the deviation details to get surgical recommendations.")
+# Load CSV file with cases if needed (optional)
+# data = pd.read_csv('strabismus_cases.csv')
 
-uploaded_file = st.file_uploader("Upload CSV file", type=["csv"])
+deviation_types = ["Esotropia", "Exotropia", "Hypertropia", "Hypotropia"]
+approaches = ["Unilateral", "Bilateral"]
 
-def display_plan(plan):
-    st.success("Affected Eye Correction: " + ", ".join(plan["affected_eye"]))
-    if plan["other_eye"]:
-        st.info("Other Eye Correction: " + ", ".join(plan["other_eye"]))
+# User input widgets
+deviation_type = st.selectbox("Select deviation type:", deviation_types)
+deviation_pd = st.slider("Enter deviation amount (Prism Diopters):", min_value=15, max_value=80, step=5)
+approach = st.selectbox("Select surgical approach:", approaches)
 
-if uploaded_file:
-    df = pd.read_csv(uploaded_file)
-    for idx, row in df.iterrows():
-        st.markdown(f"### Case {idx + 1}")
-        st.write(f"**Type**: {row['Deviation Type']} | **PD**: {row['Deviation (PD)']} | **Approach**: {row['Approach']}")
-        plan = calculate_surgery(row['Deviation Type'], int(row['Deviation (PD)']), row['Approach'])
-        display_plan(plan)
+if st.button("Calculate Surgical Plan"):
+    try:
+        corrections = calculate_correction_amounts(deviation_type, deviation_pd, approach)
 
-else:
-    st.subheader("Manual Input")
-    deviation_type = st.selectbox("Type of Deviation", ["Esotropia", "Exotropia", "Hypertropia", "Hypotropia"])
-    deviation_value = st.number_input("Deviation (Prism Diopters)", min_value=15, step=5)
-    approach = st.radio("Surgical Approach", ["Unilateral", "Bilateral"])
+        st.subheader("Surgical Recommendation")
 
-    if st.button("Show Recommendation"):
-        plan = calculate_surgery(deviation_type, deviation_value, approach)
-        display_plan(plan)
+        # Format affected eye corrections
+        affected_corrs = corrections.get("affected_eye", [])
+        affected_str = ", ".join([f"{muscle} of {amount} mm" for muscle, amount in affected_corrs])
+        if affected_str:
+            st.markdown(f"**Affected Eye Correction:** {affected_str}")
+
+        # Format other eye corrections
+        other_corrs = corrections.get("other_eye", [])
+        other_str = ", ".join([f"{muscle} of {amount} mm" for muscle, amount in other_corrs])
+        if other_str:
+            st.markdown(f"**Other Eye Correction:** {other_str}")
+
+        if not affected_str and not other_str:
+            st.write("No corrections required for the given input.")
+
+    except Exception as e:
+        st.error(f"Error: {e}")
