@@ -1,44 +1,24 @@
+# app.py
 import streamlit as st
-from logic import calculate_surgery
+from logic import calculate_plan
 
-def main():
-    st.title("Strabismus Surgical Planner")
+st.title("Strabismus Surgical Planning App")
 
-    # Dropdown for deviation type
-    deviation_type = st.selectbox(
-        "Select Deviation Type:",
-        ("Esotropia", "Exotropia", "Hypertropia", "Hypotropia")
-    )
+deviation_type = st.selectbox(
+    "Select deviation type",
+    ['esotropia', 'exotropia', 'hypertropia', 'hypotropia']
+)
 
-    # Dropdown for deviation amount starting at 15, step 5, max 80 or 100 as you want
-    deviation_values = list(range(15, 101, 5))
-    deviation_value = st.selectbox("Select Deviation (prism diopters):", deviation_values, index=0)
+deviation_pd = st.slider("Deviation amount (PD)", 15, 90, 30)
 
-    approach = st.radio("Choose Surgical Approach:", ("Unilateral", "Bilateral"))
+approach = st.radio(
+    "Select surgical approach",
+    ['unilateral', 'bilateral']
+)
 
-    if st.button("Get Surgical Recommendation"):
-        plan = calculate_surgery(deviation_type, deviation_value, approach)
-
-        # Separate procedures by eye
-        affected_eye = []
-        contralateral_eye = []
-
-        for eye, procedure in plan:
-            if eye == "Affected Eye":
-                affected_eye.append(procedure)
-            else:
-                contralateral_eye.append(procedure)
-
-        # Format output
-        st.subheader("Surgical Recommendation")
-        if affected_eye:
-            st.markdown("**Affected Eye Correction:**  ")
-            st.markdown(", ".join(affected_eye))
-
-        if contralateral_eye:
-            st.markdown("**Contralateral Eye Correction:**  ")
-            st.markdown(", ".join(contralateral_eye))
-
-
-if __name__ == "__main__":
-    main()
+if st.button("Calculate Plan"):
+    plan = calculate_plan(deviation_pd, deviation_type, approach)
+    
+    st.subheader("Surgical Plan")
+    for muscle, mm in plan.items():
+        st.write(f"{muscle}: {mm} mm")
