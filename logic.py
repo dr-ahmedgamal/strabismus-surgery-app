@@ -1,72 +1,69 @@
 def calculate_surgery(deviation_type, deviation_value, approach):
-    plan = []
+    plan = {"Affected Eye": [], "Other Eye": []}
 
-    def add_procedure(eye, muscle, action, amount):
+    def add_procedure(target, muscle, action, amount):
         if amount > 0:
-            plan.append(f"{eye} {muscle} {action} of {amount:.1f} mm")
+            plan[target].append(f"{muscle} {action} of {amount:.1f} mm")
+
+    def calculate_amount(base, step_size, step_increment):
+        if deviation_value <= 15:
+            return base
+        else:
+            return base + ((deviation_value - 15) // step_size) * step_increment
 
     def split_bilateral(amount):
-        half = round(amount / 2, 1)
-        return half, half
-
-    def handle_large_correction(primary_amount, muscle, action, opposite_muscle):
-        if primary_amount <= 12:
-            return [(muscle, action, primary_amount)], []
-        else:
-            # Split correction evenly between affected and other eye
-            half = round(primary_amount / 2, 1)
-            remainder = primary_amount - half
-            # Both eyes get half (or near half), assign accordingly
-            return [(muscle, action, half)], [(opposite_muscle, action, remainder)]
+        return round(amount / 2, 1), round(amount / 2, 1)
 
     if deviation_type == "Esotropia":
-        mr_amount = round(deviation_value / 5.0, 1)
-        lr_amount = round(deviation_value / 10.0, 1)
-        
+        mr_amount = calculate_amount(3, 5, 1)
+        lr_amount = calculate_amount(3, 5, 1)
         if approach == "Unilateral":
-            affected_corrections, other_corrections = handle_large_correction(mr_amount, "Medial Rectus", "recession", "Medial Rectus")
-            for muscle, action, amt in affected_corrections:
-                add_procedure("Affected Eye", muscle, action, amt)
-            for muscle, action, amt in other_corrections:
-                add_procedure("Other Eye", muscle, action, amt)
+            add_procedure("Affected Eye", "Medial Rectus", "recession", min(mr_amount, 12))
+            if mr_amount > 12:
+                add_procedure("Other Eye", "Medial Rectus", "recession", round(mr_amount - 12, 1))
             add_procedure("Affected Eye", "Lateral Rectus", "resection", lr_amount)
         else:
-            r_amt, l_amt = split_bilateral(mr_amount)
-            add_procedure("Affected Eye", "Medial Rectus", "recession", r_amt)
-            add_procedure("Other Eye", "Medial Rectus", "recession", l_amt)
+            r, l = split_bilateral(mr_amount)
+            add_procedure("Affected Eye", "Medial Rectus", "recession", r)
+            add_procedure("Other Eye", "Medial Rectus", "recession", l)
 
     elif deviation_type == "Exotropia":
-        lr_amount = round(deviation_value / 5.0, 1)
-        mr_amount = round(deviation_value / 10.0, 1)
-
+        lr_amount = calculate_amount(4, 5, 1)
+        mr_amount = calculate_amount(3, 5, 0.5)
         if approach == "Unilateral":
-            affected_corrections, other_corrections = handle_large_correction(lr_amount, "Lateral Rectus", "recession", "Lateral Rectus")
-            for muscle, action, amt in affected_corrections:
-                add_procedure("Affected Eye", muscle, action, amt)
-            for muscle, action, amt in other_corrections:
-                add_procedure("Other Eye", muscle, action, amt)
+            add_procedure("Affected Eye", "Lateral Rectus", "recession", min(lr_amount, 12))
+            if lr_amount > 12:
+                add_procedure("Other Eye", "Lateral Rectus", "recession", round(lr_amount - 12, 1))
             add_procedure("Affected Eye", "Medial Rectus", "resection", mr_amount)
         else:
-            r_amt, l_amt = split_bilateral(lr_amount)
-            add_procedure("Affected Eye", "Lateral Rectus", "recession", r_amt)
-            add_procedure("Other Eye", "Lateral Rectus", "recession", l_amt)
+            r, l = split_bilateral(lr_amount)
+            add_procedure("Affected Eye", "Lateral Rectus", "recession", r)
+            add_procedure("Other Eye", "Lateral Rectus", "recession", l)
 
     elif deviation_type == "Hypertropia":
-        amount = round(deviation_value / 5.0, 1)
+        sr_amount = calculate_amount(3, 5, 1)
+        ir_amount = calculate_amount(3, 5, 1)
         if approach == "Unilateral":
-            add_procedure("Affected Eye", "Superior Rectus", "recession", amount)
-            add_procedure("Affected Eye", "Inferior Rectus", "resection", amount)
+            add_procedure("Affected Eye", "Superior Rectus", "recession", min(sr_amount, 12))
+            if sr_amount > 12:
+                add_procedure("Other Eye", "Superior Rectus", "recession", round(sr_amount - 12, 1))
+            add_procedure("Affected Eye", "Inferior Rectus", "resection", ir_amount)
         else:
-            add_procedure("Affected Eye", "Superior Rectus", "recession", amount)
-            add_procedure("Other Eye", "Inferior Rectus", "recession", amount)
+            r, l = split_bilateral(sr_amount)
+            add_procedure("Affected Eye", "Superior Rectus", "recession", r)
+            add_procedure("Other Eye", "Inferior Rectus", "recession", l)
 
     elif deviation_type == "Hypotropia":
-        amount = round(deviation_value / 5.0, 1)
+        ir_amount = calculate_amount(3, 5, 1)
+        sr_amount = calculate_amount(3, 5, 1)
         if approach == "Unilateral":
-            add_procedure("Affected Eye", "Inferior Rectus", "recession", amount)
-            add_procedure("Affected Eye", "Superior Rectus", "resection", amount)
+            add_procedure("Affected Eye", "Inferior Rectus", "recession", min(ir_amount, 12))
+            if ir_amount > 12:
+                add_procedure("Other Eye", "Inferior Rectus", "recession", round(ir_amount - 12, 1))
+            add_procedure("Affected Eye", "Superior Rectus", "resection", sr_amount)
         else:
-            add_procedure("Affected Eye", "Inferior Rectus", "recession", amount)
-            add_procedure("Other Eye", "Superior Rectus", "recession", amount)
+            r, l = split_bilateral(ir_amount)
+            add_procedure("Affected Eye", "Inferior Rectus", "recession", r)
+            add_procedure("Other Eye", "Superior Rectus", "recession", l)
 
     return plan
