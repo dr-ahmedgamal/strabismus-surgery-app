@@ -1,136 +1,93 @@
-# logic.py
-
-# Constants for maximum muscle lengths
-MAX_RECESSION = 12  # mm max recession length per muscle
-MAX_RESECTION = 9   # mm max resection length per muscle
-
-def recession_length(muscle: str, PD: float) -> float:
-    """
-    Calculate recession length for given muscle and PD.
-    """
-    if muscle.lower() == 'lr':
+def calculate_recession(amount_pd, muscle_type):
+    if muscle_type == "LR":
         base = 4
         increment = 1
-    elif muscle.lower() in ['mr', 'sr', 'ir']:
+    else:  # MR, SR, IR
         base = 3
         increment = 1
-    else:
-        raise ValueError(f"Unknown muscle: {muscle}")
-    
-    length = base + ((PD - 15) / 5) * increment
-    return min(length, MAX_RECESSION)
+    return min(base + ((amount_pd - 15) / 5) * increment, 12)
 
-def resection_length(muscle: str, PD: float) -> float:
-    """
-    Calculate resection length for given muscle and PD.
-    """
-    if muscle.lower() == 'lr':
+def calculate_resection(amount_pd, muscle_type):
+    if muscle_type == "LR":
         base = 4
         increment = 0.5
-    elif muscle.lower() in ['mr', 'sr', 'ir']:
+    else:  # MR, SR, IR
         base = 3
         increment = 0.5
-    else:
-        raise ValueError(f"Unknown muscle: {muscle}")
-    
-    length = base + ((PD - 15) / 5) * increment
-    return min(length, MAX_RESECTION)
+    return min(base + ((amount_pd - 15) / 5) * increment, 9)
 
-def unilateral_approach(deviation_type: str, PD: float) -> dict:
-    """
-    Calculate unilateral approach surgery plan.
-    Two muscles (agonist + antagonist) operated in the same eye.
-    Use full PD as-is in formulas, no halving or doubling.
-    Return dict with muscle names and lengths.
-    """
-    if deviation_type.lower() == 'esotropia':
-        # MR recession + LR resection
-        recession_muscle = 'mr'
-        resection_muscle = 'lr'
-    elif deviation_type.lower() == 'exotropia':
-        # LR recession + MR resection
-        recession_muscle = 'lr'
-        resection_muscle = 'mr'
-    elif deviation_type.lower() == 'hypertropia':
-        # SR recession + IR resection (same eye)
-        recession_muscle = 'sr'
-        resection_muscle = 'ir'
-    elif deviation_type.lower() == 'hypotropia':
-        # IR recession + SR resection (same eye)
-        recession_muscle = 'ir'
-        resection_muscle = 'sr'
-    else:
-        raise ValueError("Unsupported deviation type for unilateral approach")
-    
-    recess_len = recession_length(recession_muscle, PD)
-    resect_len = resection_length(resection_muscle, PD)
+def plan_unilateral(deviation_type, amount_pd):
+    result = {}
+    if deviation_type == "Exotropia":
+        recession = calculate_recession(amount_pd, "LR")
+        resection = calculate_resection(amount_pd, "MR")
+        if recession > 12 or resection > 9:
+            return plan_bilateral(deviation_type, amount_pd)
+        result["Lateral Rectus recession"] = round(recession, 2)
+        result["Medial Rectus resection"] = round(resection, 2)
+    elif deviation_type == "Esotropia":
+        recession = calculate_recession(amount_pd, "MR")
+        resection = calculate_resection(amount_pd, "LR")
+        if recession > 12 or resection > 9:
+            return plan_bilateral(deviation_type, amount_pd)
+        result["Medial Rectus recession"] = round(recession, 2)
+        result["Lateral Rectus resection"] = round(resection, 2)
+    elif deviation_type == "Hypertropia":
+        recession = calculate_recession(amount_pd, "SR")
+        resection = calculate_resection(amount_pd, "IR")
+        if recession > 12 or resection > 9:
+            return plan_bilateral(deviation_type, amount_pd)
+        result["Superior Rectus recession"] = round(recession, 2)
+        result["Inferior Rectus resection"] = round(resection, 2)
+    elif deviation_type == "Hypotropia":
+        recession = calculate_recession(amount_pd, "IR")
+        resection = calculate_resection(amount_pd, "SR")
+        if recession > 12 or resection > 9:
+            return plan_bilateral(deviation_type, amount_pd)
+        result["Inferior Rectus recession"] = round(recession, 2)
+        result["Superior Rectus resection"] = round(resection, 2)
+    return result
 
-    # Check if either exceeds max length, if yes, unilateral approach not feasible
-    if recess_len >= MAX_RECESSION or resect_len >= MAX_RESECTION:
-        return {"error": "Unilateral approach not feasible for this PD due to muscle length limits."}
-
-    return {
-        f"{recession_muscle}_recession_mm": round(recess_len, 2),
-        f"{resection_muscle}_resection_mm": round(resect_len, 2)
-    }
-
-def bilateral_approach(deviation_type: str, PD: float) -> dict:
-    """
-    Calculate bilateral approach surgery plan.
-    Both eyes operated.
-    Usually bilateral recessions only.
-    If PD > maximum correction by recessions, add resection in affected eye for residual PD doubled.
-    Return dict with muscle names and lengths.
-    """
-    if deviation_type.lower() in ['esotropia', 'exotropia']:
-        if deviation_type.lower() == 'esotropia':
-            recess_muscle = 'mr'
-            resect_muscle = 'lr'
+def plan_bilateral(deviation_type, amount_pd):
+    result = {}
+    if deviation_type == "Exotropia":
+        recession = calculate_recession(amount_pd, "LR")
+        if recession <= 12:
+            result["Lateral Rectus recession (each eye)"] = round(recession, 2)
         else:
-            recess_muscle = 'lr'
-            resect_muscle = 'mr'
-
-        # Maximum PD correctable by bilateral recession (pair of muscles)
-        max_recession_PD = 15 + 5 * (MAX_RECESSION - (4 if recess_muscle=='lr' else 3))
-
-        if PD <= max_recession_PD:
-            # Recession alone bilaterally (both eyes)
-            recess_len = recession_length(recess_muscle, PD)
-            return {
-                f"{recess_muscle}_recession_mm_each_eye": round(recess_len, 2),
-                f"resection": "Not needed"
-            }
+            result["Lateral Rectus recession (each eye)"] = 12
+            remaining_pd = amount_pd - (15 + (12 - 4) * 5)
+            if remaining_pd > 0:
+                resection = calculate_resection(remaining_pd * 2, "MR")
+                result["Medial Rectus resection (affected eye)"] = round(resection, 2)
+    elif deviation_type == "Esotropia":
+        recession = calculate_recession(amount_pd, "MR")
+        if recession <= 12:
+            result["Medial Rectus recession (each eye)"] = round(recession, 2)
         else:
-            # Recession maxed bilaterally + resection on affected eye for doubled residual PD
-            recess_len = MAX_RECESSION
-            residual_PD = PD - max_recession_PD
-            doubled_residual = residual_PD * 2
-            resect_len = resection_length(resect_muscle, doubled_residual)
-            return {
-                f"{recess_muscle}_recession_mm_each_eye": recess_len,
-                f"{resect_muscle}_resection_mm_affected_eye": round(resect_len, 2)
-            }
-    elif deviation_type.lower() in ['hypertropia', 'hypotropia']:
-        # Vertical muscles: SR and IR in opposite eyes
-        if deviation_type.lower() == 'hypertropia':
-            recess_muscle_1 = 'sr'  # affected eye recession
-            recess_muscle_2 = 'ir'  # opposite eye recession
-        else:
-            recess_muscle_1 = 'ir'  # affected eye recession
-            recess_muscle_2 = 'sr'  # opposite eye recession
-
-        # Calculate recessions individually (vertical deviations do not require resection in bilateral)
-        recess_len_1 = recession_length(recess_muscle_1, PD)
-        recess_len_2 = recession_length(recess_muscle_2, PD)
-
-        # Check if either muscle recession exceeds max length
-        if recess_len_1 >= MAX_RECESSION or recess_len_2 >= MAX_RECESSION:
-            return {"error": "Bilateral recession not feasible for this PD due to muscle length limits."}
-
-        return {
-            f"{recess_muscle_1}_recession_mm_affected_eye": round(recess_len_1, 2),
-            f"{recess_muscle_2}_recession_mm_opposite_eye": round(recess_len_2, 2),
-            "resection": "Not needed"
-        }
-    else:
-        raise ValueError("Unsupported deviation type for bilateral approach")
+            result["Medial Rectus recession (each eye)"] = 12
+            remaining_pd = amount_pd - (15 + (12 - 3) * 5)
+            if remaining_pd > 0:
+                resection = calculate_resection(remaining_pd * 2, "LR")
+                result["Lateral Rectus resection (affected eye)"] = round(resection, 2)
+    elif deviation_type == "Hypertropia":
+        recession_sr = calculate_recession(amount_pd, "SR")
+        recession_ir = calculate_recession(amount_pd, "IR")
+        result["Superior Rectus recession (affected eye)"] = round(min(recession_sr, 12), 2)
+        result["Inferior Rectus recession (opposite eye)"] = round(min(recession_ir, 12), 2)
+        if recession_sr > 12:
+            remaining_pd = amount_pd - (15 + (12 - 3) * 5)
+            if remaining_pd > 0:
+                resection = calculate_resection(remaining_pd * 2, "IR")
+                result["Inferior Rectus resection (affected eye)"] = round(resection, 2)
+    elif deviation_type == "Hypotropia":
+        recession_ir = calculate_recession(amount_pd, "IR")
+        recession_sr = calculate_recession(amount_pd, "SR")
+        result["Inferior Rectus recession (affected eye)"] = round(min(recession_ir, 12), 2)
+        result["Superior Rectus recession (opposite eye)"] = round(min(recession_sr, 12), 2)
+        if recession_ir > 12:
+            remaining_pd = amount_pd - (15 + (12 - 3) * 5)
+            if remaining_pd > 0:
+                resection = calculate_resection(remaining_pd * 2, "SR")
+                result["Superior Rectus resection (affected eye)"] = round(resection, 2)
+    return result
