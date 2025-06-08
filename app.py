@@ -16,23 +16,24 @@ approach = st.radio("Select surgical approach:", ["Unilateral", "Bilateral"])
 
 if st.button("Calculate plan"):
     if approach == "Unilateral":
-        if unilateral_feasible(deviation_type, amount_pd):
-            result = plan_unilateral(deviation_type, amount_pd)
+        feasible = unilateral_feasible(deviation_type, amount_pd)
+        if feasible:
+            plan = plan_unilateral(deviation_type, amount_pd)
             st.subheader("Unilateral Surgical Plan")
-            for k, v in result.items():
-                st.write(f"{k}: {v} mm")
+            for muscle, mm in plan.items():
+                st.write(f"{muscle}: {mm} mm")
         else:
             st.warning(
-                "Unilateral approach is NOT feasible for this deviation.\n"
-                "Switching to Bilateral approach automatically."
+                "Unilateral approach is NOT feasible for this deviation amount.\n"
+                "Switching automatically to Bilateral approach."
             )
-            result = plan_bilateral(deviation_type, amount_pd)
+            plan = plan_bilateral(deviation_type, amount_pd)
             st.subheader("Bilateral Surgical Plan")
-            for k, v in result.items():
-                st.write(f"{k}: {v} mm")
+            for muscle, mm in plan.items():
+                st.write(f"{muscle}: {mm} mm")
 
-    else:  # Bilateral approach
-        result = plan_bilateral(deviation_type, amount_pd)
+    else:  # Bilateral approach selected
+        plan = plan_bilateral(deviation_type, amount_pd)
         st.subheader("Bilateral Surgical Plan")
-        for k, v in result.items():
-            st.write(f"{k}: {v} mm")
+        for muscle, mm in plan.items():
+            st.write(f"{muscle}: {mm} mm")
