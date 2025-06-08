@@ -1,31 +1,53 @@
 import streamlit as st
 from logic import plan_unilateral
 
-st.title("👁️Strabismus Surgery Planner")
+st.set_page_config(page_title="Strabismus Surgical Planner", layout="centered")
+st.title("👁️ Strabismus Surgery Planning")
 
-deviation_type = st.selectbox("Select deviation type:", ["Exotropia", "Esotropia", "Hypertropia", "Hypotropia"])
+# --- Inputs ---
+deviation_type = st.selectbox("Select deviation type:", ["Esotropia", "Exotropia", "Hypertropia", "Hypotropia"])
 
-# Use number_input instead of selectbox for PD
-amount_pd = st.number_input("Deviation amount (PD):", min_value=15, max_value=100, step=5, value=15)
+# Custom number input with + and - buttons
+col1, col2, col3 = st.columns([1, 2, 1])
+with col1:
+    decrease = st.button("➖", key="dec")
+with col3:
+    increase = st.button("➕", key="inc")
 
-approach = st.radio("Preferred approach:", ["Unilateral", "Bilateral"])
+if "deviation_amount" not in st.session_state:
+    st.session_state["deviation_amount"] = 15
 
-if st.button("Calculate Surgical Plan"):
-    plan = None
-    switched = False
+if increase:
+    st.session_state["deviation_amount"] += 5
+if decrease and st.session_state["deviation_amount"] > 5:
+    st.session_state["deviation_amount"] -= 5
 
+with col2:
+    st.markdown(f"<h3 style='text-align: center;'>Deviation: {st.session_state['deviation_amount']} PD</h3>", unsafe_allow_html=True)
+
+deviation_amount = st.session_state["deviation_amount"]
+
+approach = st.radio("Preferred surgical approach:", ["Unilateral", "Bilateral"])
+
+# --- Surgical Plan Button ---
+surgical_plan_clicked = st.button("🧮 Surgical Plan", use_container_width=True)
+
+result = None
+switched_to_bilateral = False
+
+if surgical_plan_clicked:
     if approach == "Unilateral":
-        plan = plan_unilateral(deviation_type, amount_pd)
-        if plan["approach"] == "Bilateral":
-            switched = True
+        result = plan_unilateral(deviation_type, deviation_amount)
+        if result.get("Switched to Bilateral"):
+            st.warning("Unilateral correction not possible for this large deviation. Switching to bilateral approach.")
+            switched_to_bilateral = True
     else:
-        from logic import plan_bilateral
-        plan = plan_bilateral(deviation_type, amount_pd)
+        result = plan_unilateral(deviation_type, deviation_amount)
+        if result.get("Switched to Bilateral"):
+            switched_to_bilateral = True
 
-    if switched:
-        st.warning("⚠️ Unilateral correction not sufficient — switched to bilateral plan.")
-
-    st.subheader(f"{plan['approach']} Surgical Plan")
-    for key, value in plan.items():
-        if key != "approach":
-            st.write(f"- **{key}**: {value} mm")
+    if result:
+        st.subheader("Recommended Surgical Plan:")
+        for k, v in result.items():
+            if k != "Switched to Bilateral":
+                st.write(f"🔹 **{k}**: {v} mm")
