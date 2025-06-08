@@ -1,34 +1,38 @@
 import streamlit as st
-from logic import plan_unilateral, plan_bilateral
+from logic import plan_unilateral, plan_bilateral, unilateral_feasible
 
 st.title("Strabismus Surgery Planning")
 
-deviation_types = ["Exotropia", "Esotropia", "Hypertropia", "Hypotropia"]
-deviation = st.selectbox("Select Deviation Type:", deviation_types)
+deviation_type = st.selectbox(
+    "Select deviation type:",
+    ["Exotropia", "Esotropia", "Hypertropia", "Hypotropia"],
+)
 
-amount_pd = st.number_input("Enter Deviation in Prism Diopters (PD):", min_value=5, max_value=150, step=5)
+amount_pd = st.number_input(
+    "Enter deviation amount (in PD):", min_value=1, step=5, value=20
+)
 
-approach = st.radio("Choose Surgical Approach:", ["Unilateral", "Bilateral"])
+approach = st.radio("Select surgical approach:", ["Unilateral", "Bilateral"])
 
-result = None
-message = ""
-
-if st.button("Calculate"):
+if st.button("Calculate plan"):
     if approach == "Unilateral":
-        result = plan_unilateral(deviation, amount_pd)
-        if result is None:
-            message = ("Unilateral approach is NOT feasible for full correction of this deviation. "
-                       "Showing bilateral approach plan instead.")
-            result = plan_bilateral(deviation, amount_pd)
-    else:
-        result = plan_bilateral(deviation, amount_pd)
+        if unilateral_feasible(deviation_type, amount_pd):
+            result = plan_unilateral(deviation_type, amount_pd)
+            st.subheader("Unilateral Surgical Plan")
+            for k, v in result.items():
+                st.write(f"{k}: {v} mm")
+        else:
+            st.warning(
+                "Unilateral approach is NOT feasible for this deviation.\n"
+                "Switching to Bilateral approach automatically."
+            )
+            result = plan_bilateral(deviation_type, amount_pd)
+            st.subheader("Bilateral Surgical Plan")
+            for k, v in result.items():
+                st.write(f"{k}: {v} mm")
 
-    if result:
-        st.subheader("Surgical Plan:")
-        for muscle, value in result.items():
-            st.write(f"{muscle}: {value} mm")
-    else:
-        st.warning("No surgical plan available for the given parameters.")
-
-    if message:
-        st.info(message)
+    else:  # Bilateral approach
+        result = plan_bilateral(deviation_type, amount_pd)
+        st.subheader("Bilateral Surgical Plan")
+        for k, v in result.items():
+            st.write(f"{k}: {v} mm")
