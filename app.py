@@ -3,21 +3,32 @@ from logic import plan_unilateral, plan_bilateral
 
 st.title("Strabismus Surgery Planning")
 
-deviation_type = st.selectbox("Select Deviation Type:", ["Esotropia", "Exotropia", "Hypertropia", "Hypotropia"])
-amount_pd = st.slider("Enter deviation in Prism Diopters (PD):", min_value=15, max_value=120, step=5)
-approach = st.selectbox("Select Surgical Approach:", ["Unilateral", "Bilateral"])
+deviation_types = ["Exotropia", "Esotropia", "Hypertropia", "Hypotropia"]
+deviation = st.selectbox("Select Deviation Type:", deviation_types)
 
-if st.button("Calculate Plan"):
+amount_pd = st.number_input("Enter Deviation in Prism Diopters (PD):", min_value=5, max_value=150, step=5)
+
+approach = st.radio("Choose Surgical Approach:", ["Unilateral", "Bilateral"])
+
+result = None
+message = ""
+
+if st.button("Calculate"):
     if approach == "Unilateral":
-        plan, converted = plan_unilateral(deviation_type, amount_pd)
-        if converted:
-            st.warning("Unilateral approach is NOT feasible for full correction. Automatically switched to Bilateral approach.")
-            approach = "Bilateral"  # Update UI or logic to show the switch
-        else:
-            st.success("Unilateral approach plan:")
+        result = plan_unilateral(deviation, amount_pd)
+        if result is None:
+            message = ("Unilateral approach is NOT feasible for full correction of this deviation. "
+                       "Showing bilateral approach plan instead.")
+            result = plan_bilateral(deviation, amount_pd)
     else:
-        plan = plan_bilateral(deviation_type, amount_pd)
-        st.success("Bilateral approach plan:")
+        result = plan_bilateral(deviation, amount_pd)
 
-    for muscle, value in plan.items():
-        st.write(f"- **{muscle}**: {value} mm")
+    if result:
+        st.subheader("Surgical Plan:")
+        for muscle, value in result.items():
+            st.write(f"{muscle}: {value} mm")
+    else:
+        st.warning("No surgical plan available for the given parameters.")
+
+    if message:
+        st.info(message)
