@@ -10,7 +10,24 @@ amount_pd = st.number_input("Deviation amount (PD):", min_value=15, max_value=10
 
 approach = st.radio("Preferred approach:", ["Unilateral", "Bilateral"])
 
-if st.button("Calculate Surgical Plan"):
+# Custom CSS for larger button
+st.markdown(
+    """
+    <style>
+    div.stButton > button {
+        height: 3.5em;
+        font-size: 1.3em;
+        font-weight: bold;
+        background-color: #4CAF50;
+        color: white;
+        border-radius: 8px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+if st.button("Surgical Plan"):
     plan = None
     switched = False
 
