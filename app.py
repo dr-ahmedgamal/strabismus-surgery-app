@@ -4,7 +4,10 @@ from logic import plan_unilateral
 st.title("Strabismus Surgery Planning Tool")
 
 deviation_type = st.selectbox("Select deviation type:", ["Exotropia", "Esotropia", "Hypertropia", "Hypotropia"])
-amount_pd = st.selectbox("Deviation amount (PD):", list(range(15, 105, 5)))
+
+# Use number_input instead of selectbox for PD
+amount_pd = st.number_input("Deviation amount (PD):", min_value=15, max_value=100, step=5, value=15)
+
 approach = st.radio("Preferred approach:", ["Unilateral", "Bilateral"])
 
 if st.button("Calculate Surgical Plan"):
