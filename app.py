@@ -7,7 +7,7 @@ st.title("👁️ Strabismus Surgery Planning")
 # --- Inputs ---
 deviation_type = st.selectbox("Select deviation type:", ["Esotropia", "Exotropia", "Hypertropia", "Hypotropia"])
 
-# Custom number input with + and - buttons
+# Custom deviation input with + / - buttons
 col1, col2, col3 = st.columns([1, 2, 1])
 with col1:
     decrease = st.button("➖", key="dec")
@@ -29,8 +29,26 @@ deviation_amount = st.session_state["deviation_amount"]
 
 approach = st.radio("Preferred surgical approach:", ["Unilateral", "Bilateral"])
 
-# --- Surgical Plan Button ---
-surgical_plan_clicked = st.button("🧮 Surgical Plan", use_container_width=True)
+# --- Custom CSS to enlarge and style the button ---
+st.markdown(
+    """
+    <style>
+    div.stButton > button {
+        height: 3.5em;
+        width: 100%;
+        font-size: 1.5em;
+        font-weight: bold;
+        background-color: #4CAF50;
+        color: white;
+        border-radius: 8px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+# --- Large Surgical Plan Button ---
+surgical_plan_clicked = st.button("Surgical Plan")
 
 result = None
 switched_to_bilateral = False
@@ -38,16 +56,18 @@ switched_to_bilateral = False
 if surgical_plan_clicked:
     if approach == "Unilateral":
         result = plan_unilateral(deviation_type, deviation_amount)
-        if result.get("Switched to Bilateral"):
-            st.warning("Unilateral correction not possible for this large deviation. Switching to bilateral approach.")
+        if isinstance(result, tuple):  # This means it switched to bilateral
+            result, _ = result
+            st.warning("Unilateral correction not possible for this large deviation. Switched to bilateral approach.")
             switched_to_bilateral = True
     else:
         result = plan_unilateral(deviation_type, deviation_amount)
-        if result.get("Switched to Bilateral"):
+        if isinstance(result, tuple):
+            result, _ = result
             switched_to_bilateral = True
 
     if result:
         st.subheader("Recommended Surgical Plan:")
         for k, v in result.items():
-            if k != "Switched to Bilateral":
+            if k != "approach":
                 st.write(f"🔹 **{k}**: {v} mm")
