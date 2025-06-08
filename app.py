@@ -1,39 +1,20 @@
 import streamlit as st
-from logic import plan_unilateral, plan_bilateral, unilateral_feasible
+from logic import plan_unilateral
 
-st.title("Strabismus Surgery Planning")
+st.title("Strabismus Surgery Planning Tool")
 
-deviation_type = st.selectbox(
-    "Select deviation type:",
-    ["Exotropia", "Esotropia", "Hypertropia", "Hypotropia"],
-)
+deviation_type = st.selectbox("Select deviation type:", ["Exotropia", "Esotropia", "Hypertropia", "Hypotropia"])
+amount_pd = st.slider("Deviation amount (PD):", min_value=15, max_value=100, step=5)
+approach = st.radio("Preferred approach:", ["Unilateral", "Bilateral"])
 
-amount_pd = st.number_input(
-    "Enter deviation amount (in PD):", min_value=1, step=5, value=20
-)
-
-approach = st.radio("Select surgical approach:", ["Unilateral", "Bilateral"])
-
-if st.button("Calculate plan"):
+if st.button("Calculate Surgical Plan"):
     if approach == "Unilateral":
-        feasible = unilateral_feasible(deviation_type, amount_pd)
-        if feasible:
-            plan = plan_unilateral(deviation_type, amount_pd)
-            st.subheader("Unilateral Surgical Plan")
-            for muscle, mm in plan.items():
-                st.write(f"{muscle}: {mm} mm")
-        else:
-            st.warning(
-                "Unilateral approach is NOT feasible for this deviation amount.\n"
-                "Switching automatically to Bilateral approach."
-            )
-            plan = plan_bilateral(deviation_type, amount_pd)
-            st.subheader("Bilateral Surgical Plan")
-            for muscle, mm in plan.items():
-                st.write(f"{muscle}: {mm} mm")
-
-    else:  # Bilateral approach selected
+        plan = plan_unilateral(deviation_type, amount_pd)
+    else:
+        from logic import plan_bilateral
         plan = plan_bilateral(deviation_type, amount_pd)
-        st.subheader("Bilateral Surgical Plan")
-        for muscle, mm in plan.items():
-            st.write(f"{muscle}: {mm} mm")
+
+    st.subheader(f"{plan['approach']} Surgical Plan")
+    for key, value in plan.items():
+        if key != "approach":
+            st.write(f"- **{key}**: {value} mm")
