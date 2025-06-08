@@ -10,17 +10,21 @@ amount_pd = st.number_input("Deviation amount (PD):", min_value=15, max_value=10
 
 approach = st.radio("Preferred approach:", ["Unilateral", "Bilateral"])
 
-# Custom CSS for larger button
+# Custom CSS for centered white button
 st.markdown(
     """
     <style>
     div.stButton > button {
+        display: block;
+        margin: 0 auto;
         height: 3.5em;
+        width: 50%;
         font-size: 1.3em;
         font-weight: bold;
-        background-color: #4CAF50;
-        color: white;
+        background-color: white;
+        color: black;
         border-radius: 8px;
+        border: 2px solid #ccc;
     }
     </style>
     """,
