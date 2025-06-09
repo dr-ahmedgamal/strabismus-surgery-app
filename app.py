@@ -1,6 +1,8 @@
 import streamlit as st
 from logic import plan_unilateral
 
+st.set_page_config(page_title="Strabismus Surgery Planner", layout="centered")
+
 st.title("Strabismus Surgery Planner")
 
 deviation_type = st.selectbox("Select deviation type:", ["Exotropia", "Esotropia", "Hypertropia", "Hypotropia"])
