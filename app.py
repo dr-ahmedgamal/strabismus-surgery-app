@@ -5,6 +5,14 @@ st.set_page_config(page_title="Strabismus Surgery Planner", layout="centered")
 
 st.title("Strabismus Surgery Planner")
 
+st.markdown("""
+This app calculates the recommended strabismus surgery plan based on patient data,
+including deviation type and measurements, following the latest clinical guidelines.
+""")
+
+# --- Input Section ---
+st.header("Patient Data Input")
+
 deviation_type = st.selectbox("Select deviation type:", ["Exotropia", "Esotropia", "Hypertropia", "Hypotropia"])
 
 # Use number_input instead of selectbox for PD
@@ -52,3 +60,14 @@ if st.button("Surgical Plan"):
     for key, value in plan.items():
         if key != "approach":
             st.write(f"- **{key}**: {value} mm")
+
+
+    st.markdown("""
+    ---
+    **Notes:**
+    - Recommendations are based on current clinical guidelines.
+    - Always correlate with clinical examination and patient-specific factors.
+    """)
+
+else:
+    st.markdown("*_Enter patient data and click 'Surgical Plan' to see the results._*")
